@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>逆水寒大地圖探索攻略</title>
+    <style>
+        :root { --primary-color: #c6a052; } /* 逆水寒古風金色調 */
+        body { font-family: 'Microsoft JhengHei', sans-serif; background: #fcfaf2; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h1 { text-align: center; color: #333; margin-bottom: 20px; }
+        
+        /* 地圖切換按鈕 */
+        .map-tabs { display: flex; gap: 10px; margin-bottom: 25px; justify-content: center; }
+        .tab-btn { background: #eee; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; }
+        .tab-btn.active { background: var(--primary-color); color: white; }
+
+        /* 進度條 */
+        .progress-box { background: #f0f0f0; border-radius: 20px; height: 25px; margin-bottom: 30px; overflow: hidden; position: relative; border: 1px solid #ddd; }
+        .progress-bar { background: linear-gradient(90deg, #8bc34a, #4caf50); height: 100%; width: 0%; transition: width 0.4s ease; }
+        .progress-text { position: absolute; width: 100%; text-align: center; line-height: 25px; font-size: 14px; font-weight: bold; color: #333; }
+
+        /* 攻略清單 */
+        .quest-item { display: flex; align-items: center; padding: 16px; border-bottom: 1px solid #f0f0f0; transition: 0.2s; background: #fff; margin-bottom: 8px; border-radius: 8px; border-left: 4px solid var(--primary-color); }
+        .quest-item:hover { background: #fdfbf7; }
+        .quest-item input[type="checkbox"] { width: 20px; height: 20px; margin-right: 15px; cursor: pointer; accent-color: #4caf50; }
+        .quest-content { flex: 1; }
+        .coordinate { background: #fff3e0; color: #e65100; padding: 3px 8px; border-radius: 4px; font-size: 13px; font-weight: bold; margin-right: 10px; display: inline-block; }
+        .npc-tag { color: #795548; font-weight: bold; margin-right: 10px; }
+
+        /* 打勾後的樣式 */
+        .completed { border-left-color: #ccc; background: #f9f9f9 !important; opacity: 0.6; }
+        .completed .quest-content { text-decoration: line-through; color: #999; }
+        .completed .coordinate { background: #e0e0e0; color: #757575; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🧭 逆水寒探索進度助手</h1>
+    
+    <!-- 地圖切換標籤 -->
+    <div class="map-tabs">
+        <button class="tab-btn active" onclick="switchMap('汴京')">汴京</button>
+        <button class="tab-btn" onclick="switchMap('杭州')">杭州</button>
+        <button class="tab-btn" onclick="switchMap('桃溪村')">桃溪村</button>
+    </div>
+    
+    <!-- 進度條 -->
+    <div class="progress-box">
+        <div class="progress-text" id="progressText">0% (0/0)</div>
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <!-- 攻略內容 -->
+    <div id="questList"></div>
+</div>
+
+<script>
+// 這裡放您的攻略數據（以後您可以自己在這裡增加內容）
+const allQuests = [
+    // 汴京
+    { id: "bj_1", map: "汴京", coor: "1121, 929", npc: "李師師", do: "出示【冰雪冷丸子】觸發《玉藕記》人間任務。" },
+    { id: "bj_2", map: "汴京", coor: "1054, 872", npc: "無名老人", do: "使用江湖技能【吸星攬月】抓取屋頂上的風物。" },
+    { id: "bj_3", map: "汴京", coor: "988, 1103", npc: "神秘寶箱", do: "使用【烈火燎原】燒掉藤蔓，開啟隱藏大寶箱。" },
+    // 杭州
+    { id: "hz_1", map: "杭州", coor: "955, 804", npc: "阿和", do: "對話觸發傳聞，需要幫他尋找丟失的風箏。" },
+    { id: "hz_2", map: "杭州", coor: "1314, 920", npc: "雷峰塔頂", do: "使用輕功飛到塔頂，使用【望氣】發現金色風物。" },
+    // 桃溪村
+    { id: "txc_1", map: "桃溪村", coor: "925, 1080", npc: "小桃子", do: "出示【糖葫蘆】獲得趣味技能。" }
+];
+
+let currentMap = '汴京';
+// 從瀏覽器記憶體載入已完成清單
+let completedQuests = JSON.parse(localStorage.getItem('nsh_completed_v1')) || [];
+
+function render() {
+    const listContainer = document.getElementById('questList');
+    listContainer.innerHTML = '';
+    
+    // 篩選出當前地圖的攻略
+    const currentQuests = allQuests.filter(q => q.map === currentMap);
+    
+    currentQuests.forEach(quest => {
+        const isDone = completedQuests.includes(quest.id);
+        const item = document.createElement('div');
+        item.className = `quest-item ${isDone ? 'completed' : ''}`;
+        item.innerHTML = `
+            <input type="checkbox" ${isDone ? 'checked' : ''} onclick="toggleQuest('${quest.id}')">
+            <div class="quest-content">
+                <span class="coordinate">📍 ${quest.coor}</span>
+                <span class="npc-tag">【${quest.npc}】</span>
+                <span>${quest.do}</span>
+            </div>
+        `;
+        listContainer.appendChild(item);
+    });
+
+    updateProgress(currentQuests);
+}
+
+function toggleQuest(id) {
+    if (completedQuests.includes(id)) {
+        completedQuests = completedQuests.filter(item => item !== id);
+    } else {
+        completedQuests.push(id);
+    }
+    localStorage.setItem('nsh_completed_v1', JSON.stringify(completedQuests));
+    render();
+}
+
+function updateProgress(currentQuests) {
+    const total = currentQuests.length;
+    const doneCount = currentQuests.filter(q => completedQuests.includes(q.id)).length;
+    const percentage = total === 0 ? 0 : Math.round((doneCount / total) * 100);
+    
+    document.getElementById('progressBar').style.width = `${percentage}%`;
+    document.getElementById('progressText').innerText = `${currentMap} 探索進度：${percentage}% (${doneCount}/${total})`;
+}
+
+function switchMap(mapName) {
+    currentMap = mapName;
+    // 切換按鈕的 active 樣式
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if(btn.innerText === mapName) btn.classList.add('active');
+    });
+    render();
+}
+
+// 初始化載入
+render();
+</script>
+
+</body>
+</html>
